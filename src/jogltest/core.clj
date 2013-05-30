@@ -33,6 +33,21 @@
   (def frame nil))
 
 
+
+(defn do-fog [gl]
+  (let [fog-col [0.3 0.3 0.3 0]
+        fog-dist 120]
+    (doto gl
+      (.glEnable GL2/GL_FOG)
+      (.glFogi GL2/GL_FOG_MODE GL/GL_LINEAR)
+      (.glFogf GL2/GL_FOG_DENSITY (float 0.5))
+      (.glFogfv GL2/GL_FOG_COLOR (float-array fog-col) (float 0.0))
+      (.glFogf GL2/GL_FOG_START (- fog-dist 50))
+      (.glFogf GL2/GL_FOG_END fog-dist)
+      (.glHint GL2/GL_FOG_HINT GL/GL_NICEST)
+        )
+))
+
 (defn render [drawable]
   (let [gl (.. drawable getGL getGL2)]
     (doto gl
@@ -40,11 +55,13 @@
       (.glClearDepth 1.0)
       (.glEnable GL/GL_DEPTH_TEST)
       (.glClear GL/GL_DEPTH_BUFFER_BIT)
-      (.glClear GL/GL_COLOR_BUFFER_BIT)         
+      (.glClear GL/GL_COLOR_BUFFER_BIT))
+    (do-fog gl)
+    (doto gl
       (.glLoadIdentity)
-      (.glTranslatef 0.0 0.0 -5.0)
-      (.glRotatef @run-time 0.0 0.0 1.0)
-
+      (.glTranslatef 0.0 0.0 -100.0)
+      (.glScalef 50.0 50.0 50.0)
+      (.glRotatef @run-time 0.0 1.0 1.0)
       (.glBegin GL2/GL_QUADS)
       (.glColor3f 1.0 0.0 0.0)
       (.glVertex3f -1.0 1.0 0.0)
@@ -88,10 +105,13 @@
         drawable
         (proxy [KeyListener] []
           (keyPressed [e]
-            (key-pressed e)  
-            )))
+            (key-pressed e))
+          (keyTyped [e]
+            (println (.getKeyChar e) ))
+          (keyReleased [e])
+        )
       )
-    ))
+    )))
 
 
 (defn add-window-listener [component]
