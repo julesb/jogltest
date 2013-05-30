@@ -1,0 +1,9 @@
+pom.xml
+*jar
+*.swp
+/lib/
+/classes/
+/native/
+/maven-repo/
+.lein-failures
+.lein-deps-sum
