@@ -1,5 +1,6 @@
 (ns jogltest.core
     (:gen-class)
+    (:import (java.nio IntBuffer FloatBuffer))
     (:import (java.awt Frame))
     (:import (java.awt.event WindowAdapter))
     (:import (java.awt.event KeyListener KeyEvent))
@@ -7,6 +8,9 @@
     (:import (javax.media.opengl.fixedfunc GLMatrixFunc))
     (:import (javax.media.opengl GL2 GL GLAutoDrawable GLEventListener))
     (:import (com.jogamp.opengl.util Animator ))
+    (:import (com.jogamp.opengl.util.awt TextRenderer))
+    (:import (java.awt Font))
+    (:use [jogltest.vbo-test :as vbo-test])
   )
 
 (defn throw-str [s]
@@ -33,43 +37,60 @@
   (def frame nil))
 
 
-
 (defn do-fog [gl]
-  (let [fog-col [0.3 0.3 0.3 0]
-        fog-dist 120]
+  (let [fog-col [0.0 0.0 0.0 0]
+        fog-dist 20]
     (doto gl
       (.glEnable GL2/GL_FOG)
       (.glFogi GL2/GL_FOG_MODE GL/GL_LINEAR)
       (.glFogf GL2/GL_FOG_DENSITY (float 0.5))
       (.glFogfv GL2/GL_FOG_COLOR (float-array fog-col) (float 0.0))
-      (.glFogf GL2/GL_FOG_START (- fog-dist 50))
+      (.glFogf GL2/GL_FOG_START (- fog-dist 10))
       (.glFogf GL2/GL_FOG_END fog-dist)
-      (.glHint GL2/GL_FOG_HINT GL/GL_NICEST)
-        )
-))
+      (.glHint GL2/GL_FOG_HINT GL/GL_NICEST))))
+
+
+(defn draw-quad [gl]
+  (doto gl
+      (.glPushMatrix)
+      (.glTranslatef 0.0 0.0 -100.1) 
+      ;(.glScalef 0.5 0.5 0.5)
+      ;(.glRotatef @run-time 0.0 1.0 1.0)
+      (.glBegin GL2/GL_QUADS)
+      (.glColor4f 0.0 0.0 0.0 0.25)
+      (.glVertex3f -1.0  1.0 0.0)
+      (.glVertex3f  1.0  1.0 0.0)
+      (.glVertex3f  1.0 -1.0 0.0)
+      (.glVertex3f -1.0 -1.0 0.0)
+      (.glEnd)
+      (.glPopMatrix)
+  ))
+
 
 (defn render [drawable]
   (let [gl (.. drawable getGL getGL2)]
+    (do-fog gl)
     (doto gl
-      (.glClearColor 0.3 0.3 0.3 1.0)
+      (.glClearColor 0.0 0.0 0.0 1.0)
       (.glClearDepth 1.0)
       (.glEnable GL/GL_DEPTH_TEST)
       (.glClear GL/GL_DEPTH_BUFFER_BIT)
-      (.glClear GL/GL_COLOR_BUFFER_BIT))
-    (do-fog gl)
-    (doto gl
+      (.glClear GL/GL_COLOR_BUFFER_BIT)
       (.glLoadIdentity)
-      (.glTranslatef 0.0 0.0 -100.0)
-      (.glScalef 50.0 50.0 50.0)
-      (.glRotatef @run-time 0.0 1.0 1.0)
-      (.glBegin GL2/GL_QUADS)
-      (.glColor3f 1.0 0.0 0.0)
-      (.glVertex3f -1.0 1.0 0.0)
-      (.glVertex3f 1.0 1.0 0.0)
-      (.glVertex3f 1.0 -1.0 0.0)
-      (.glVertex3f -1.0 -1.0 0.0)
-      (.glEnd)
-   )))
+      (.glTranslatef 0.0 0.0 -20.0)
+      (.glRotatef @run-time 0.0 1.0 0.0)
+    )
+    (vbo-test/render-vbo gl)
+    (draw-quad gl)
+
+    (let [rnd (TextRenderer. (Font. "SansSerif" Font/PLAIN 14))]
+      (.beginRendering rnd (.getWidth drawable) (.getHeight drawable))
+      (.setColor rnd 1 1 1 1)
+      (.draw rnd (str (System/currentTimeMillis)) 10 20)
+      (.endRendering rnd)
+      (.dispose rnd))
+
+    ))
 
 
 (defn key-pressed [e]
@@ -84,7 +105,7 @@
         (throw-str "nil drawable"))
       (do
         (render drawable)
-        (swap! run-time #(+ % 0.2))))
+        (swap! run-time #(+ % 0.5))))
 
     (reshape [this drawable x y width height]
       (let [gl (.. drawable getGL getGL2)
@@ -98,7 +119,8 @@
           (.glMatrixMode GLMatrixFunc/GL_MODELVIEW)
           (.glLoadIdentity))))
 
-    (dispose [this drawable])
+    (dispose [this drawable]
+      (vbo-test/dispose drawable))
 
     (init [this drawable]
       (.addKeyListener
@@ -111,6 +133,12 @@
           (keyReleased [e])
         )
       )
+      (println "VBO supported:" (vbo-test/vbo-supported? (.. drawable getGL getGL2)))
+        
+      (doto (.getGL2 (.getGL drawable))
+        (.glEnable GL/GL_BLEND)
+        (.glBlendFunc GL/GL_SRC_ALPHA  GL/GL_ONE_MINUS_SRC_ALPHA ))
+      (vbo-test/init drawable)
     )))
 
 
