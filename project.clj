@@ -7,5 +7,5 @@
   :repositories {"local" ~(str (.toURI (java.io.File. "maven-repo")))}
   :native-path "lib/jogamp-all-platforms/lib/"
   :main jogltest.core
-  :jvm-opts ["-Djogamp.gluegen.UseTempJarCache=false"]
+  :jvm-opts ["-Djogamp.gluegen.UseTempJarCache=false" "-Xmx 2048M"]
 )

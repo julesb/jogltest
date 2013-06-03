@@ -21,6 +21,8 @@
 (def ^:dynamic frame (Frame.))
 (def ^:dynamic animator (Animator. canvas))
 
+(def frames-per-sec (atom -99))
+
 ;(defn jogl-drawble []
 ;  (reify GLAutoDrawable
 ;    (getWidth [this]
@@ -39,13 +41,13 @@
 
 (defn do-fog [gl]
   (let [fog-col [0.0 0.0 0.0 0]
-        fog-dist 20]
+        fog-dist 200]
     (doto gl
       (.glEnable GL2/GL_FOG)
       (.glFogi GL2/GL_FOG_MODE GL/GL_LINEAR)
       (.glFogf GL2/GL_FOG_DENSITY (float 0.5))
       (.glFogfv GL2/GL_FOG_COLOR (float-array fog-col) (float 0.0))
-      (.glFogf GL2/GL_FOG_START (- fog-dist 10))
+      (.glFogf GL2/GL_FOG_START (- fog-dist 100))
       (.glFogf GL2/GL_FOG_END fog-dist)
       (.glHint GL2/GL_FOG_HINT GL/GL_NICEST))))
 
@@ -53,7 +55,7 @@
 (defn draw-quad [gl]
   (doto gl
       (.glPushMatrix)
-      (.glTranslatef 0.0 0.0 -100.1) 
+      ;(.glTranslatef 0.0 0.0 -100.1) 
       ;(.glScalef 0.5 0.5 0.5)
       ;(.glRotatef @run-time 0.0 1.0 1.0)
       (.glBegin GL2/GL_QUADS)
@@ -70,6 +72,7 @@
 (defn render [drawable]
   (let [gl (.. drawable getGL getGL2)]
     (do-fog gl)
+    
     (doto gl
       (.glClearColor 0.0 0.0 0.0 1.0)
       (.glClearDepth 1.0)
@@ -77,16 +80,20 @@
       (.glClear GL/GL_DEPTH_BUFFER_BIT)
       (.glClear GL/GL_COLOR_BUFFER_BIT)
       (.glLoadIdentity)
-      (.glTranslatef 0.0 0.0 -20.0)
-      (.glRotatef @run-time 0.0 1.0 0.0)
+      (.glTranslatef 0.0 0.0 -150.0)
+      (.glRotatef @run-time 0.0 1.0 1.0)
     )
+    
     (vbo-test/render-vbo gl)
-    (draw-quad gl)
+    ;(draw-quad gl)
 
     (let [rnd (TextRenderer. (Font. "SansSerif" Font/PLAIN 14))]
       (.beginRendering rnd (.getWidth drawable) (.getHeight drawable))
       (.setColor rnd 1 1 1 1)
-      (.draw rnd (str (System/currentTimeMillis)) 10 20)
+      (.draw rnd (str "fps:" @frames-per-sec) 10 60)
+      (.draw rnd (str "tris:" vbo-test/num-tris) 10 40)
+      (.draw rnd (str "tris/s:" (int (* vbo-test/num-tris @frames-per-sec))) 10 20)
+
       (.endRendering rnd)
       (.dispose rnd))
 
@@ -105,7 +112,8 @@
         (throw-str "nil drawable"))
       (do
         (render drawable)
-        (swap! run-time #(+ % 0.5))))
+        (reset! frames-per-sec (.getLastFPS animator))
+        (swap! run-time #(+ % 0.3))))
 
     (reshape [this drawable x y width height]
       (let [gl (.. drawable getGL getGL2)
@@ -134,7 +142,10 @@
         )
       )
       (println "VBO supported:" (vbo-test/vbo-supported? (.. drawable getGL getGL2)))
-        
+      
+      (.setUpdateFPSFrames (.getAnimator drawable) 30 nil)
+      ; drawable.getAnimator().setUpdateFPSFrames(3, null);
+
       (doto (.getGL2 (.getGL drawable))
         (.glEnable GL/GL_BLEND)
         (.glBlendFunc GL/GL_SRC_ALPHA  GL/GL_ONE_MINUS_SRC_ALPHA ))
@@ -163,6 +174,7 @@
         (.setResizable true)
         (add-window-listener)
         (.setVisible true))
+    ;(.setRunAsFastAsPossible animator true)
     (.start animator)
     (.requestFocus canvas)))
 
