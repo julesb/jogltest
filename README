@@ -1,13 +1,8 @@
 # jogltest
 
-FIXME: write description
+Playing with getting a workable Clojure/JOGL setup
 
-## Usage
 
-FIXME: write
-
-## License
-
-Copyright (C) 2013 FIXME
+Copyright (C) 2013 julesb 
 
 Distributed under the Eclipse Public License, the same as Clojure.
