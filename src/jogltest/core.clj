@@ -1,6 +1,6 @@
 (ns jogltest.core
     (:gen-class)
-    (:import (java.nio IntBuffer FloatBuffer))
+    ;(:import (java.nio IntBuffer FloatBuffer))
     (:import (java.awt Frame))
     (:import (java.awt.event WindowAdapter))
     (:import (java.awt.event KeyListener KeyEvent))
@@ -30,10 +30,13 @@
 
 (def run-time (atom 0.0))
 
+(def text-renderer (TextRenderer. (Font. "SansSerif" Font/PLAIN 14)))
+
 (defn exit []
   (println "bye")
   (.stop animator)
   (.dispose frame)
+  ;(.dispose text-renderer)
   (def animator nil)
   (def canvas nil)
   (def frame nil))
@@ -71,7 +74,7 @@
 
 (defn render [drawable]
   (let [gl (.. drawable getGL getGL2)]
-    (do-fog gl)
+    ;(do-fog gl)
     
     (doto gl
       (.glClearColor 0.0 0.0 0.0 1.0)
@@ -80,24 +83,19 @@
       (.glClear GL/GL_DEPTH_BUFFER_BIT)
       (.glClear GL/GL_COLOR_BUFFER_BIT)
       (.glLoadIdentity)
-      (.glTranslatef 0.0 0.0 -150.0)
+      (.glTranslatef 0.0 0.0 -200.0)
       (.glRotatef @run-time 0.0 1.0 1.0)
     )
     
     (vbo-test/render-vbo gl)
     ;(draw-quad gl)
 
-    (let [rnd (TextRenderer. (Font. "SansSerif" Font/PLAIN 14))]
-      (.beginRendering rnd (.getWidth drawable) (.getHeight drawable))
-      (.setColor rnd 1 1 1 1)
-      (.draw rnd (str "fps:" @frames-per-sec) 10 60)
-      (.draw rnd (str "tris:" vbo-test/num-tris) 10 40)
-      (.draw rnd (str "tris/s:" (int (* vbo-test/num-tris @frames-per-sec))) 10 20)
-
-      (.endRendering rnd)
-      (.dispose rnd))
-
-    ))
+    (.beginRendering text-renderer (.getWidth drawable) (.getHeight drawable))
+    (.draw text-renderer (str "fps:" @frames-per-sec) 10 60)
+    (.draw text-renderer (str "tris:" vbo-test/num-tris) 10 40)
+    (.draw text-renderer (str "Mtris/s:" (int (/ (* vbo-test/num-tris @frames-per-sec) 1000000))) 10 20)
+    (.endRendering text-renderer)
+  ))
 
 
 (defn key-pressed [e]
@@ -128,7 +126,8 @@
           (.glLoadIdentity))))
 
     (dispose [this drawable]
-      (vbo-test/dispose drawable))
+      (vbo-test/dispose drawable)
+      (.dispose text-renderer))
 
     (init [this drawable]
       (.addKeyListener
@@ -138,17 +137,16 @@
             (key-pressed e))
           (keyTyped [e]
             (println (.getKeyChar e) ))
-          (keyReleased [e])
-        )
-      )
+          (keyReleased [e])))
       (println "VBO supported:" (vbo-test/vbo-supported? (.. drawable getGL getGL2)))
       
       (.setUpdateFPSFrames (.getAnimator drawable) 30 nil)
-      ; drawable.getAnimator().setUpdateFPSFrames(3, null);
+      (.setColor text-renderer 1 1 1 1)
 
       (doto (.getGL2 (.getGL drawable))
         (.glEnable GL/GL_BLEND)
-        (.glBlendFunc GL/GL_SRC_ALPHA  GL/GL_ONE_MINUS_SRC_ALPHA ))
+        (.glBlendFunc GL/GL_SRC_ALPHA  GL/GL_ONE_MINUS_SRC_ALPHA)
+        (.glEnable GL2/GL_COLOR_MATERIAL))
       (vbo-test/init drawable)
     )))
 
@@ -174,7 +172,7 @@
         (.setResizable true)
         (add-window-listener)
         (.setVisible true))
-    ;(.setRunAsFastAsPossible animator true)
+    (.setRunAsFastAsPossible animator true)
     (.start animator)
     (.requestFocus canvas)))
 
